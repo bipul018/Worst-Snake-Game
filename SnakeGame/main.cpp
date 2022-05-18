@@ -22,6 +22,7 @@ enum SurfaceImgs {
 	SQUARE_RED,
 	SQUARE_WHITE,
 	GAME_OVER,
+	SQUARE_BLACK,
 	VOID
 };
 
@@ -34,7 +35,8 @@ const char* names[] = {
 	"CircleYellow.png",
 	"SquareRed.png",
 	"SquareWhite.png",
-	"GameOver.png"
+	"GameOver.png",
+	"SquareBlack.png"
 };
 
 SDL_Surface* getSurfaceFromImg(const char* filename, unsigned char* data, int& width, int& height) {
@@ -98,12 +100,12 @@ SDL_Surface* getSurfaceFromImg(const char* filename, unsigned char* data, int& w
 
 //Screen dimension constants
 constexpr int boxSize = 20;
-constexpr int nBoxes = 20;
+constexpr int nBoxes = 30;
 constexpr int SCREEN_WIDTH =  boxSize * ( nBoxes + 2);
 constexpr int SCREEN_HEIGHT = boxSize * ( nBoxes + 2);
 
 //Rect for screen
-SDL_Rect screenRect = { SCREEN_WIDTH/2,SCREEN_HEIGHT/2,SCREEN_WIDTH,SCREEN_HEIGHT };
+SDL_Rect screenRect = {0,0,SCREEN_WIDTH,SCREEN_HEIGHT };
 
 //Starts up SDL and creates window
 bool init();
@@ -125,13 +127,16 @@ SDL_Surface* gScreenSurface = NULL;
 bool quit = false;
 SDL_Event e;
 
+SDL_Rect playGroundRect = { boxSize,boxSize,SCREEN_WIDTH - 2 * boxSize,SCREEN_HEIGHT - 2 * boxSize };
+
 enum Content {
 	BOARD,
 	BODY,
 	HEAD,
 	TAIL,
 	SINGLE,
-	FOOD
+	FOOD,
+	BRICK
 };
 
 enum Direction {
@@ -146,9 +151,11 @@ enum Direction {
 int headX = 0;
 int headY = 0;
 int snakeLen = 1;
+int nBricks = 0;
 Direction snakeDir;
 int foodX, foodY;
 bool gameOver = false;
+bool updateData = true;
 Uint64 timeTicks = 0;
 Uint64 initTick = 0;
 Uint64 scoreTick = 0;
@@ -181,6 +188,9 @@ struct BoardUnit {
 			break;
 		case BOARD:
 			i = SQUARE_WHITE;
+			break;
+		case BRICK:
+			i = SQUARE_BLACK;
 			break;
 		case BODY:
 			i = SQUARE_RED;
@@ -243,14 +253,33 @@ void drawBoard() {
 }
 
 void generateFood() {
-	foodX, foodY;
+	//One added for this food
+	if (snakeLen + nBricks + 1 >= nBoxes * nBoxes)
+		return;
 	do {
 		foodX = rand() % nBoxes;
 		foodY = rand() % nBoxes;
 	} while (units[foodY * nBoxes + foodX].mem != BOARD);
 
 	units[foodY * nBoxes + foodX].mem = FOOD;
+	units[foodY * nBoxes + foodX].dir = NONE;
 
+}
+
+void addBrick() {
+	//One added for food and one for the new brick
+	if (snakeLen + nBricks + 2 >= nBoxes * nBoxes)
+		return;
+	int brickX, brickY;
+	
+	do {
+		brickX = rand() % nBoxes;
+		brickY = rand() % nBoxes;
+	} while (units[brickY * nBoxes + brickX].mem != BOARD);
+
+	units[brickY * nBoxes + brickX].mem = BRICK;
+	units[brickY * nBoxes + brickX].dir = NONE;
+	nBricks++;
 }
 
 BoardUnit* getNext(BoardUnit* prev, Direction dir, bool wrapSnake = true) {
@@ -305,8 +334,10 @@ void moveForward() {
 			head->mem = BODY;
 		}
 		snakeLen++;
-		currScore++;
-		if (snakeLen == nBoxes * nBoxes) {
+		currScore += nBricks + 1;
+		addBrick();
+		updateData = true;
+		if (snakeLen + nBricks == nBoxes * nBoxes) {
 			gameOver == true;
 		}
 		else
@@ -372,11 +403,16 @@ bool loop() {
 	if ((timeTicks - initTick) > 20) {
 		SDL_Delay(3);
 	}
-	if (timeTicks - scoreTick > 10000) {
+	//Time base updating system
+	//if (timeTicks - scoreTick > 10000) {
+	// Change based updating system
+	if (updateData) {
+		if (system("cls")) system("clear");
 		std::cout << "Score : " << currScore << std::endl;
 		if (gameOver)
 			std::cout << "Game Over\n";
 		scoreTick = timeTicks;
+		updateData = false;
 	}
 
 	while (SDL_PollEvent(&e) != 0) {
@@ -421,8 +457,7 @@ bool loop() {
 
 	drawBoard();
 	if(gameOver) {
-		SDL_BlitSurface(gHelloWorld[GAME_OVER], NULL, gScreenSurface, NULL);
-
+		SDL_BlitScaled(gHelloWorld[GAME_OVER], nullptr, gScreenSurface, &playGroundRect);
 	}
 	SDL_UpdateWindowSurface(gWindow);
 	return quit;
@@ -545,8 +580,7 @@ int main(int argc, char* args[])
 
 		//Main loop
 		while (!quit) {
-			SDL_BlitSurface(gHelloWorld[SQUARE_WHITE], NULL, gScreenSurface, NULL);
-
+			SDL_BlitScaled(gHelloWorld[SQUARE_WHITE], nullptr, gScreenSurface,&screenRect);
 			loop();
 		}
 
