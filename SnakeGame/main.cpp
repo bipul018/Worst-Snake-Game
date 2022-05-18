@@ -258,14 +258,6 @@ struct BoardUnit {
 
 BoardUnit units[nBoxes * nBoxes + 1];
 
-void drawBoard() {
-	for (int i = 0; i < nBoxes * nBoxes; i++) {
-
-		units[i].draw();
-
-	}
-}
-
 void generateFood() {
 	//One added for this food
 	if (snakeLen + nBricks + 1 >= nBoxes * nBoxes)
@@ -278,6 +270,70 @@ void generateFood() {
 	units[foodY * nBoxes + foodX].mem = FOOD;
 	units[foodY * nBoxes + foodX].dir = NONE;
 
+}
+
+
+void resetSnake() {
+	for (int x = 0; x < nBoxes; x++) {
+		for (int y = 0; y < nBoxes; y++) {
+			switch (units[x + y * nBoxes].mem) {
+			case HEAD:
+				units[x + y * nBoxes].mem = SINGLE;
+				units[x + y * nBoxes].dir = NONE;
+				break;
+			case FOOD:
+			case TAIL:
+			case BODY:
+				units[x + y * nBoxes].mem = BOARD;
+				units[x + y * nBoxes].dir = NONE;
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	snakeLen = 1;
+	currScore = 0;
+	gameOver = false;
+	updateData = true;
+	gameRun = true;
+	snakeDir = static_cast<Direction>(-snakeDir);
+	generateFood();
+
+}
+void resetBoard() {
+
+	for (int x = 0; x < nBoxes; x++) {
+		for (int y = 0; y < nBoxes; y++) {
+			units[x + y * nBoxes].row = y;
+			units[x + y * nBoxes].col = x;
+			units[x + y * nBoxes].mem = BOARD;
+			units[x + y * nBoxes].dir = NONE;
+
+		}
+	}
+	units[0].mem = SINGLE;
+	units[0].dir = NONE;
+	headX = 0;
+	headY = 0;
+	snakeDir = RIGHT;
+	snakeLen = 1;
+	nBricks = 0;
+	currScore = 0;
+	gameOver = false;
+	updateData = true;
+	gameRun = false;
+	
+	generateFood();
+
+}
+
+void drawBoard() {
+	for (int i = 0; i < nBoxes * nBoxes; i++) {
+
+		units[i].draw();
+
+	}
 }
 
 void addBrick() {
@@ -417,7 +473,7 @@ bool loop() {
 		initTick = timeTicks;
 	}
 	if ((timeTicks - initTick) > 20) {
-		SDL_Delay(3);
+		SDL_Delay(5);
 	}
 	//Time base updating system
 	//if (timeTicks - scoreTick > 10000) {
@@ -428,7 +484,7 @@ bool loop() {
 			if (gameRun)
 				std::cout << "Press space to pause\n";
 			else
-				std::cout << "Press space to continue playing\nPress H to display high score\n";
+				std::cout << "Game Paused\nPress space to continue playing\nPress H to display high score\n";
 
 		std::cout << "Current Player : " << playerName << "\tScore : " << currScore << std::endl;
 		if (gameOver) {
@@ -482,14 +538,11 @@ bool loop() {
 				}
 			}
 		}
-		else if (!gameRun) {
+		else if (!gameRun && e.key.type == SDL_KEYUP) {
 			switch (e.key.keysym.sym) {
 			case SDLK_SPACE:
-
-				if (e.key.type == SDL_KEYUP) {
-					gameRun = true;
-					updateData = true;
-				}
+				gameRun = true;
+				updateData = true;
 				break;
 			case SDLK_h:
 				updateData = true;
@@ -498,8 +551,24 @@ bool loop() {
 				break;
 			}
 		}
-		else {
-
+		else if (gameOver && e.key.type == SDL_KEYUP) {
+			switch (e.key.keysym.sym) {
+			case SDLK_SPACE:
+				resetSnake();
+				updateData = true;
+				gameOver = false;
+				break;
+			case SDLK_h:
+				updateData = true;
+				showHigh = true;
+				justEntered = false;
+				break;
+			case SDLK_RETURN:
+				resetBoard();
+				updateData = true;
+				gameOver = false;
+				break;
+			}
 		}
 		
 	}
@@ -519,6 +588,8 @@ bool loop() {
 		else
 			SDL_BlitScaled(gHelloWorld[GAME_OVER], nullptr, gScreenSurface, &playGroundRect);
 	}
+	else if(!gameRun)
+		SDL_BlitScaled(gHelloWorld[GAME_PAUSE], nullptr, gScreenSurface, &playGroundRect);
 	SDL_UpdateWindowSurface(gWindow);
 	return quit;
 }
@@ -553,22 +624,8 @@ bool init()
 		scoreTick = timeTicks;
 	}
 
-	for (int x = 0; x < nBoxes; x++) {
-		for (int y = 0; y < nBoxes; y++) {
-			units[x + y * nBoxes].row = y;
-			units[x + y * nBoxes].col = x;
-			units[x + y * nBoxes].mem  = BOARD;
-			units[x + y * nBoxes].dir = NONE;
-			
-		}
-	}
-	units[0].mem = SINGLE;
-	units[0].dir = NONE;
-	snakeDir = RIGHT;
 	srand(time(nullptr));
-
-	generateFood();
-
+	resetBoard();
 	return success;
 }
 
@@ -614,7 +671,12 @@ void close()
 }
 
 int main(int argc, char* args[])
-{
+{	
+	std::cout << "Welcome to worst snake game made by me\n";
+	std::cout << "Don't worry actual game is in GUI, but being in early phases of game development,"
+		<< " important infos will be presented in console.\n";
+	std::cout << "Just as game starts it will be paused, so feel free to initially rearrange console "
+		<< "window and game window for easy view to console window.\n";
 	std::cout << "Enter player name :";
 	std::cin >> playerName;
 
