@@ -23,6 +23,10 @@ enum SurfaceImgs {
 	SQUARE_WHITE,
 	GAME_OVER,
 	SQUARE_BLACK,
+	SQUARE_GOLD,
+	GAME_PAUSE,
+	GAME_START,
+	GAME_WIN,
 	VOID
 };
 
@@ -36,7 +40,11 @@ const char* names[] = {
 	"SquareRed.png",
 	"SquareWhite.png",
 	"GameOver.png",
-	"SquareBlack.png"
+	"SquareBlack.png",
+	"SquareGold.png",
+	"GamePause.png",
+	"GameStart.png",
+	"GameWin.png"
 };
 
 SDL_Surface* getSurfaceFromImg(const char* filename, unsigned char* data, int& width, int& height) {
@@ -154,8 +162,14 @@ int snakeLen = 1;
 int nBricks = 0;
 Direction snakeDir;
 int foodX, foodY;
+
+//Game Condition stuffs
 bool gameOver = false;
 bool updateData = true;
+bool gameRun = true;
+
+
+//Timer stuff
 Uint64 timeTicks = 0;
 Uint64 initTick = 0;
 Uint64 scoreTick = 0;
@@ -384,6 +398,7 @@ void moveForward() {
 		break;
 	default:
 		gameOver = true;
+		updateData = true;
 		break;
 	}
 
@@ -408,9 +423,19 @@ bool loop() {
 	// Change based updating system
 	if (updateData) {
 		if (system("cls")) system("clear");
-		std::cout << "Score : " << currScore << std::endl;
-		if (gameOver)
+		if (!gameOver)
+			std::cout << "Press space to pause\n";
+		std::cout << "Current Player : " << playerName << "Score : " << currScore << std::endl;
+		if (gameOver) {
 			std::cout << "Game Over\n";
+			if (snakeLen + nBricks == nBoxes * nBoxes)
+				std::cout << "Congratulations you won !\n";
+			else
+				std::cout << "You lost\n";
+			std::cout << "Press space to start new snake with same board or"
+				<< "press enter to start full new game\n"
+				<<"Press H to display high scores";
+		}
 		scoreTick = timeTicks;
 		updateData = false;
 	}
@@ -421,31 +446,38 @@ bool loop() {
 			quit = true;
 			break;
 		}
-		
-		if (justEntered) {
-			switch (e.key.keysym.sym) {
-			case SDLK_UP:
-				newDir = UP;
-				break;
-			case SDLK_DOWN:
-				newDir = DOWN;
-				break;
-			case SDLK_LEFT:
-				newDir = LEFT;
-				break;
-			case SDLK_RIGHT:
-				newDir = RIGHT;
-				break;
-			default:
-				justEntered = true;
-				break;
-			}
-			if ((static_cast<int>(newDir) != -static_cast<int>(snakeDir)) && newDir != NONE) {
-				justEntered = false;
-				
+		if (gameRun) {
+			if (justEntered) {
+				switch (e.key.keysym.sym) {
+				case SDLK_UP:
+					newDir = UP;
+					break;
+				case SDLK_DOWN:
+					newDir = DOWN;
+					break;
+				case SDLK_LEFT:
+					newDir = LEFT;
+					break;
+				case SDLK_RIGHT:
+					newDir = RIGHT;
+					break;
+				case SDLK_SPACE:
+					gameRun = false;
+					updateData = true;
+					break;
+				default:
+					justEntered = true;
+					break;
+				}
+				if ((static_cast<int>(newDir) != -static_cast<int>(snakeDir)) && newDir != NONE) {
+					justEntered = false;
+
+				}
 			}
 		}
+		else {
 
+		}
 	}
 	if (canPlay) {
 		if ((static_cast<int>(newDir) != -static_cast<int>(snakeDir)) && newDir != NONE) {
@@ -457,7 +489,11 @@ bool loop() {
 
 	drawBoard();
 	if(gameOver) {
-		SDL_BlitScaled(gHelloWorld[GAME_OVER], nullptr, gScreenSurface, &playGroundRect);
+		if (snakeLen + nBricks == nBoxes * nBoxes)
+
+			SDL_BlitScaled(gHelloWorld[GAME_WIN], nullptr, gScreenSurface, &playGroundRect);
+		else
+			SDL_BlitScaled(gHelloWorld[GAME_OVER], nullptr, gScreenSurface, &playGroundRect);
 	}
 	SDL_UpdateWindowSurface(gWindow);
 	return quit;
@@ -580,7 +616,7 @@ int main(int argc, char* args[])
 
 		//Main loop
 		while (!quit) {
-			SDL_BlitScaled(gHelloWorld[SQUARE_WHITE], nullptr, gScreenSurface,&screenRect);
+			SDL_BlitScaled(gHelloWorld[SQUARE_GOLD], nullptr, gScreenSurface,&screenRect);
 			loop();
 		}
 
