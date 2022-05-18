@@ -407,6 +407,7 @@ void moveForward() {
 
 bool loop() {
 	static Direction newDir = NONE;
+	static bool showHigh = true;
 	bool justEntered = true;
 	bool canPlay = false;
 	timeTicks = SDL_GetTicks64();
@@ -424,8 +425,12 @@ bool loop() {
 	if (updateData) {
 		if (system("cls")) system("clear");
 		if (!gameOver)
-			std::cout << "Press space to pause\n";
-		std::cout << "Current Player : " << playerName << "Score : " << currScore << std::endl;
+			if (gameRun)
+				std::cout << "Press space to pause\n";
+			else
+				std::cout << "Press space to continue playing\nPress H to display high score\n";
+
+		std::cout << "Current Player : " << playerName << "\tScore : " << currScore << std::endl;
 		if (gameOver) {
 			std::cout << "Game Over\n";
 			if (snakeLen + nBricks == nBoxes * nBoxes)
@@ -434,7 +439,7 @@ bool loop() {
 				std::cout << "You lost\n";
 			std::cout << "Press space to start new snake with same board or"
 				<< "press enter to start full new game\n"
-				<<"Press H to display high scores";
+				<< "Press H to display high scores";
 		}
 		scoreTick = timeTicks;
 		updateData = false;
@@ -446,7 +451,7 @@ bool loop() {
 			quit = true;
 			break;
 		}
-		if (gameRun) {
+		if (gameRun && !gameOver) {
 			if (justEntered) {
 				switch (e.key.keysym.sym) {
 				case SDLK_UP:
@@ -462,8 +467,10 @@ bool loop() {
 					newDir = RIGHT;
 					break;
 				case SDLK_SPACE:
-					gameRun = false;
-					updateData = true;
+					if (e.key.type == SDL_KEYUP) {
+						gameRun = false;
+						updateData = true;
+					}
 					break;
 				default:
 					justEntered = true;
@@ -475,15 +482,32 @@ bool loop() {
 				}
 			}
 		}
+		else if (!gameRun) {
+			switch (e.key.keysym.sym) {
+			case SDLK_SPACE:
+
+				if (e.key.type == SDL_KEYUP) {
+					gameRun = true;
+					updateData = true;
+				}
+				break;
+			case SDLK_h:
+				updateData = true;
+				showHigh = true;
+				justEntered = false;
+				break;
+			}
+		}
 		else {
 
 		}
+		
 	}
 	if (canPlay) {
 		if ((static_cast<int>(newDir) != -static_cast<int>(snakeDir)) && newDir != NONE) {
 			snakeDir = newDir;
 		}
-		if (!gameOver)
+		if (!gameOver && gameRun)
 			moveForward();
 	}
 
